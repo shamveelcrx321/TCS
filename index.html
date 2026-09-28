@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Question Paper Generator - Academic Exam Suite</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- Custom & Print Stylesheet -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
+
+    <!-- Toast Notification Container -->
+    <div id="notification-toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 no-print"></div>
+
+    <!-- Top Global Header -->
+    <header class="bg-slate-900 text-white border-b border-slate-800 shadow-md no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center font-black text-lg text-white shadow">
+                    QG
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight">AI Question Paper Generator</h1>
+                    <p class="text-xs text-slate-400">Automated Syllabus Analysis & University Exam Paper Creator</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span id="api-status-badge" class="text-xs font-semibold px-2.5 py-1 rounded bg-amber-100 text-amber-700 border border-amber-300">
+                    Standard Local Engine
+                </span>
+                <button id="btn-api-settings" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-semibold border border-slate-700 transition">
+                    ⚙ API Settings
+                </button>
+                <button onclick="App.saveProjectBundle()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow transition">
+                    💾 Save Project
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 6-Step Stepper Progress Bar -->
+    <nav class="bg-white border-b border-slate-200 shadow-sm py-4 no-print">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center relative">
+                
+                <div id="step-item-1" onclick="App.renderStep(1)" class="step-stepper-item cursor-pointer active">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Upload</div>
+                </div>
+
+                <div id="step-item-2" onclick="App.renderStep(2)" class="step-stepper-item cursor-pointer">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Analyze & Topics</div>
+                </div>
+
+                <div id="step-item-3" onclick="App.renderStep(3)" class="step-stepper-item cursor-pointer">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Question Bank</div>
+                </div>
+
+                <div id="step-item-4" onclick="App.renderStep(4)" class="step-stepper-item cursor-pointer">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Paper Config</div>
+                </div>
+
+                <div id="step-item-5" onclick="App.renderStep(5)" class="step-stepper-item cursor-pointer">
+                    <div class="step-circle">5</div>
+                    <div class="step-label">Preview & Edit</div>
+                </div>
+
+                <div id="step-item-6" onclick="App.renderStep(6)" class="step-stepper-item cursor-pointer">
+                    <div class="step-circle">6</div>
+                    <div class="step-label">Export & Stats</div>
+                </div>
+
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
+
+        <!-- STEP 1: UPLOAD SYLLABUS SCREEN -->
+        <section id="step-view-1" class="space-y-8">
+            <div class="text-center max-w-2xl mx-auto">
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Upload Syllabus PDF Document</h2>
+                <p class="text-slate-600 text-sm">Upload your university, college, or school course syllabus. Our AI engine will automatically extract topics, modules, learning outcomes, and weightage.</p>
+            </div>
+
+            <!-- Upload Box Container -->
+            <div class="max-w-3xl mx-auto">
+                <div id="drop-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-white hover:border-blue-500 hover:bg-blue-50/50 transition cursor-pointer shadow-sm">
+                    
+                    <div id="upload-idle-state" class="space-y-4">
+                        <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+                            📄
+                        </div>
+                        <div>
+                            <p class="text-base font-semibold text-slate-800">Drag and drop your Syllabus PDF here</p>
+                            <p class="text-xs text-slate-500 mt-1">Accepts PDF files up to 25MB • Scanned PDF OCR support included</p>
+                        </div>
+                        <div>
+                            <button type="button" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow transition">
+                                Choose PDF File
+                            </button>
+                            <input id="pdf-file-input" type="file" accept="application/pdf" class="hidden">
+                        </div>
+                    </div>
+
+                    <div id="upload-active-state" class="hidden space-y-4">
+                        <div class="flex items-center justify-center gap-4 bg-slate-50 p-4 rounded-lg border">
+                            <div class="text-3xl">📄</div>
+                            <div class="text-left">
+                                <div id="file-name-display" class="font-bold text-slate-800 text-sm">syllabus.pdf</div>
+                                <div class="text-xs text-slate-500 flex gap-3">
+                                    <span id="file-size-display">2.4 MB</span>
+                                    <span id="page-count-display">Reading pages...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="upload-progress-container" class="hidden mt-4 bg-white p-4 rounded-lg border">
+                    <div class="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                        <span id="upload-progress-status">Processing PDF...</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2">
+                        <div id="upload-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Canvas Preview -->
+                <div class="mt-6 text-center">
+                    <canvas id="pdf-preview-canvas" class="mx-auto rounded border shadow-sm max-h-64"></canvas>
+                </div>
+
+                <!-- Action Button -->
+                <div class="mt-6 text-center">
+                    <button id="btn-analyze-syllabus" onclick="App.analyzeSyllabus()" disabled class="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold shadow-lg transition">
+                        Analyze Syllabus & Extract Topics →
+                    </button>
+                </div>
+            </div>
+
+            <!-- 1-Click Sample Syllabi Selector -->
+            <div class="max-w-3xl mx-auto pt-8 border-t border-slate-200">
+                <h3 class="text-sm font-bold text-slate-700 mb-3 text-center">Or load a pre-configured sample syllabus for instant testing:</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button onclick="App.loadSampleSyllabus('data-structures')" class="p-3 bg-white border border-slate-200 hover:border-blue-500 rounded-lg text-left shadow-sm hover:shadow transition group">
+                        <div class="font-bold text-sm text-slate-800 group-hover:text-blue-600">Data Structures & Algorithms</div>
+                        <div class="text-xs text-slate-500">CS302 • 5 Modules • Arrays, Trees, Graphs, Sorting</div>
+                    </button>
+                    <button onclick="App.loadSampleSyllabus('university-physics')" class="p-3 bg-white border border-slate-200 hover:border-blue-500 rounded-lg text-left shadow-sm hover:shadow transition group">
+                        <div class="font-bold text-sm text-slate-800 group-hover:text-blue-600">Engineering Physics</div>
+                        <div class="text-xs text-slate-500">PHY101 • 4 Modules • Quantum Mechanics, EM Theory</div>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 2: SYLLABUS ANALYSIS & TOPIC TREE SCREEN -->
+        <section id="step-view-2" class="hidden space-y-6">
+            <div class="flex justify-between items-center border-b pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Extracted Syllabus Structure & Topic Tree</h2>
+                    <p class="text-xs text-slate-500">Review, add, edit, or deselect topics before generating the question bank.</p>
+                </div>
+                <button onclick="App.generateQuestionBank()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow transition">
+                    Confirm Topics & Generate Question Bank →
+                </button>
+            </div>
+
+            <!-- Interactive Topic Tree Container -->
+            <div id="topic-tree-container"></div>
+        </section>
+
+        <!-- STEP 3: QUESTION BANK DASHBOARD -->
+        <section id="step-view-3" class="hidden space-y-6">
+            <!-- Metrics Banner -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-lg border shadow-sm text-center">
+                    <div id="qb-total-count" class="text-2xl font-black text-blue-600">0</div>
+                    <div class="text-xs font-semibold text-slate-500">Total Questions</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg border shadow-sm text-center">
+                    <div id="qb-beginner-count" class="text-2xl font-black text-green-600">0</div>
+                    <div class="text-xs font-semibold text-slate-500">Beginner (2 Marks)</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg border shadow-sm text-center">
+                    <div id="qb-intermediate-count" class="text-2xl font-black text-amber-600">0</div>
+                    <div class="text-xs font-semibold text-slate-500">Intermediate (5-6 Marks)</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg border shadow-sm text-center">
+                    <div id="qb-advanced-count" class="text-2xl font-black text-red-600">0</div>
+                    <div class="text-xs font-semibold text-slate-500">Advanced (10 Marks)</div>
+                </div>
+            </div>
+
+            <!-- Toolbar Filters -->
+            <div class="bg-white p-4 rounded-lg border shadow-sm flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex-1 min-w-[200px]">
+                    <input id="qb-search-input" type="text" onkeyup="App.updateQbFilters()" placeholder="Search questions in bank..." class="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <select id="qb-filter-module" onchange="App.updateQbFilters()" class="border rounded-lg px-2.5 py-1.5 text-xs text-slate-700 bg-white">
+                        <option value="All">All Modules</option>
+                    </select>
+                    <select id="qb-filter-difficulty" onchange="App.updateQbFilters()" class="border rounded-lg px-2.5 py-1.5 text-xs text-slate-700 bg-white">
+                        <option value="All">All Difficulties</option>
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                    </select>
+                    <select id="qb-filter-type" onchange="App.updateQbFilters()" class="border rounded-lg px-2.5 py-1.5 text-xs text-slate-700 bg-white">
+                        <option value="All">All Types</option>
+                        <option value="Short answer">Short answer</option>
+                        <option value="Long answer">Long answer</option>
+                        <option value="MCQ">MCQ</option>
+                        <option value="Numerical">Numerical</option>
+                        <option value="Problem-solving">Problem-solving</option>
+                        <option value="Programming question">Programming</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Question Cards List -->
+            <div id="question-bank-cards-container" class="grid grid-cols-1 gap-4"></div>
+
+            <div class="flex justify-between items-center pt-4 border-t">
+                <button onclick="App.renderStep(2)" class="px-4 py-2 border rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50">← Back to Topics</button>
+                <button onclick="App.renderStep(4)" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow">Proceed to Paper Configuration →</button>
+            </div>
+        </section>
+
+        <!-- STEP 4: PAPER CONFIGURATION SCREEN -->
+        <section id="step-view-4" class="hidden space-y-6">
+            <div class="border-b pb-4">
+                <h2 class="text-xl font-bold text-slate-900">Question Paper Configuration & Section Builder</h2>
+                <p class="text-xs text-slate-500">Configure basic examination info, total marks, and section structure.</p>
+            </div>
+
+            <!-- Real-Time Math Validation Alert Box -->
+            <div id="math-validation-alert-box"></div>
+
+            <!-- Basic Details Form -->
+            <div class="bg-white p-5 rounded-lg border shadow-sm space-y-4">
+                <h3 class="font-bold text-slate-800 border-b pb-2 text-sm">Basic Examination Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Institution Name</label>
+                        <input id="cfg-institution" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Department</label>
+                        <input id="cfg-department" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Course / Program</label>
+                        <input id="cfg-coursename" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Subject Name</label>
+                        <input id="cfg-subject" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Course Code</label>
+                        <input id="cfg-code" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Semester</label>
+                        <input id="cfg-semester" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Examination Title</label>
+                        <input id="cfg-examtitle" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Academic Year</label>
+                        <input id="cfg-academicyear" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Date</label>
+                        <input id="cfg-date" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Duration</label>
+                        <input id="cfg-duration" type="text" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Required Total Marks</label>
+                        <input id="cfg-totalmarks" type="number" onchange="App.runRealtimeMathValidation()" class="w-full border rounded px-3 py-1.5 font-bold text-blue-600">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Section Builder -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800 text-base">Paper Sections (Part A, Part B, Part C...)</h3>
+                    <button onclick="App.addSection()" class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700">+ Add Section</button>
+                </div>
+                <div id="sections-builder-container"></div>
+            </div>
+
+            <div class="flex justify-between items-center pt-4 border-t">
+                <button onclick="App.renderStep(3)" class="px-4 py-2 border rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50">← Back to Question Bank</button>
+                <button onclick="App.generatePaper()" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-base shadow-lg">Generate Examination Paper →</button>
+            </div>
+        </section>
+
+        <!-- STEP 5: PAPER PREVIEW & EDITING SCREEN -->
+        <section id="step-view-5" class="hidden space-y-6">
+            <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-lg border shadow-sm no-print">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Question Paper Preview & Interactive Editing</h2>
+                    <p class="text-xs text-slate-500">Hover over any question on the paper to edit text, replace from bank, or reorder.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="App.undoPaperEdit()" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 rounded text-xs font-semibold text-slate-700">↩ Undo</button>
+                    <button onclick="App.redoPaperEdit()" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 rounded text-xs font-semibold text-slate-700">↪ Redo</button>
+                    <button onclick="App.renderStep(6)" class="px-6 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold shadow">Proceed to Export →</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Paper Document Canvas (3 Cols) -->
+                <div class="lg:col-span-3">
+                    <div id="paper-preview-document"></div>
+                </div>
+
+                <!-- Diagnostics Sidebar (1 Col) -->
+                <div class="lg:col-span-1 no-print">
+                    <div id="paper-diagnostics-sidebar"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 6: EXPORT & STATISTICS SCREEN -->
+        <section id="step-view-6" class="hidden space-y-6">
+            <div class="border-b pb-4">
+                <h2 class="text-xl font-bold text-slate-900">Export & Examination Paper Analytics</h2>
+                <p class="text-xs text-slate-500">Download formatted examination papers in PDF/DOCX or save your project bundle.</p>
+            </div>
+
+            <!-- Stats Summary -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-lg border shadow-sm text-center">
+                    <div id="stat-total-questions" class="text-2xl font-black text-slate-800">0</div>
+                    <div class="text-xs font-semibold text-slate-500">Total Paper Questions</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg border shadow-sm text-center">
+                    <div id="stat-total-marks" class="text-2xl font-black text-blue-600">0</div>
+                    <div class="text-xs font-semibold text-slate-500">Total Marks</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg border shadow-sm text-center">
+                    <div id="stat-coverage" class="text-2xl font-black text-purple-600">0%</div>
+                    <div class="text-xs font-semibold text-slate-500">Syllabus Coverage</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg border shadow-sm text-center">
+                    <div id="stat-duplicates" class="text-2xl font-black text-green-600">0</div>
+                    <div class="text-xs font-semibold text-slate-500">Duplicate Warnings</div>
+                </div>
+            </div>
+
+            <!-- Export Buttons Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                <button onclick="App.exportPdf()" class="p-6 bg-white border-2 border-blue-200 hover:border-blue-600 rounded-xl text-center shadow-sm hover:shadow transition group">
+                    <div class="text-3xl mb-2">📄</div>
+                    <div class="font-bold text-slate-800 group-hover:text-blue-600">Download PDF / Print</div>
+                    <div class="text-xs text-slate-500 mt-1">High-resolution A4 print layout</div>
+                </button>
+
+                <button onclick="App.exportDocx()" class="p-6 bg-white border-2 border-blue-200 hover:border-blue-600 rounded-xl text-center shadow-sm hover:shadow transition group">
+                    <div class="text-3xl mb-2">📝</div>
+                    <div class="font-bold text-slate-800 group-hover:text-blue-600">Download DOCX</div>
+                    <div class="text-xs text-slate-500 mt-1">Microsoft Word editable format</div>
+                </button>
+
+                <button onclick="App.exportQuestionBankCsv()" class="p-6 bg-white border-2 border-slate-200 hover:border-blue-600 rounded-xl text-center shadow-sm hover:shadow transition group">
+                    <div class="text-3xl mb-2">📊</div>
+                    <div class="font-bold text-slate-800 group-hover:text-blue-600">Export Question Bank CSV</div>
+                    <div class="text-xs text-slate-500 mt-1">Spreadsheet CSV format</div>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Gemini API Key Settings Modal -->
+    <div id="api-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <h3 class="text-lg font-bold text-slate-900 border-b pb-2">Gemini AI API Configuration</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Enter your Google Gemini API key to enable generative AI topic parsing and question synthesis. Leave blank to run the fast, built-in standalone rule engine.
+            </p>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Gemini API Key</label>
+                <input id="api-key-input" type="password" placeholder="AIzaSy..." class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="document.getElementById('api-modal').classList.add('hidden')" class="px-4 py-2 border rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button id="btn-save-api-key" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 shadow">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals Progress Overlays -->
+    <div id="analysis-progress-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4">
+            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <h4 class="font-bold text-slate-900">Analyzing Syllabus Content</h4>
+            <div class="w-full bg-slate-200 rounded-full h-2">
+                <div id="analysis-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 10%"></div>
+            </div>
+            <p id="analysis-progress-status" class="text-xs text-slate-500">Extracting topics and structure...</p>
+        </div>
+    </div>
+
+    <div id="qbank-progress-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4">
+            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <h4 class="font-bold text-slate-900">Generating Question Bank</h4>
+            <div class="w-full bg-slate-200 rounded-full h-2">
+                <div id="qbank-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 10%"></div>
+            </div>
+            <p id="qbank-progress-status" class="text-xs text-slate-500">Generating questions at 3 difficulty levels...</p>
+        </div>
+    </div>
+
+    <!-- Application Script Modules -->
+    <script src="js/sample-syllabi.js"></script>
+    <script src="js/pdf-extractor.js"></script>
+    <script src="js/syllabus-analyzer.js"></script>
+    <script src="js/question-generator.js"></script>
+    <script src="js/paper-configurator.js"></script>
+    <script src="js/selection-engine.js"></script>
+    <script src="js/export-engine.js"></script>
+    <script src="js/storage-manager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
